@@ -4,6 +4,10 @@ import idautils
 import idaapi
 import idc
 
+true = True
+false = False
+none = None
+
 def main():
     base_addr = 0
     ea = 0
