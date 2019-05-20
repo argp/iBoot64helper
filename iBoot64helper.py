@@ -1,13 +1,57 @@
-# argp@census-labs.com, Wed 15 May 2019 01:05:33 PM EEST
+# argp@census-labs.com, Mon 20 May 2019 05:21:33 PM EEST
 
 import idautils
 import idaapi
+import ida_search
+import ida_funcs
 import idc
 import struct
 
 true = True
 false = False
 none = None
+
+def find_macho_valid(base_ea):
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFEEDFACF)
+    
+    if ea_list[0] != 0xffffffffffffffff:
+        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        print "\t[+] _macho_valid = 0x%x" % (func_ea)
+        idc.MakeName(func_ea, "_macho_valid")
+
+        return func_ea
+
+    return 0xffffffffffffffff
+
+def find_loaded_kernelcache(ea):
+    ea_list = list(idautils.XrefsTo(ea))
+
+    if ea_list[0].frm != 0xffffffffffffffff:
+        func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
+        print "\t[+] _loaded_kernelcache = 0x%x" % (func_ea)
+        idc.MakeName(func_ea, "_loaded_kernelcache")
+
+        return func_ea
+
+    return 0xffffffffffffffff
+
+def find_load_kernelcache(ea):
+    ea_list = list(idautils.XrefsTo(ea))
+
+    if ea_list[0].frm != 0xffffffffffffffff:
+        func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
+        print "\t[+] _load_kernelcache = 0x%x" % (func_ea)
+        idc.MakeName(func_ea, "_load_kernelcache")
+
+        return func_ea
+
+    return 0xffffffffffffffff
+
+def find_interesting(base_ea):
+
+    mv_ea = find_macho_valid(base_ea)
+    ldk_ea = find_loaded_kernelcache(mv_ea)
+    lk_ea = find_load_kernelcache(ldk_ea)
 
 def accept_file(fd, fname):
     version = 0
@@ -85,9 +129,12 @@ def load_file(fd, neflags, format):
                 idc.MakeFunction(ea)
 
             ea = ea + 4
-            
+    
     idc.AnalyzeArea(segment_start, segment_end)
     idaapi.autoWait()
+
+    print("[+] Looking for interesting functions")
+    find_interesting(segment_start)
 
     return 1
 
