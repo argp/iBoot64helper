@@ -1,4 +1,4 @@
-# argp@census-labs.com, Mon 20 May 2019 05:21:33 PM EEST
+# argp@census-labs.com, Mon 29 Jul 2019 01:26:44 PM EEST
 
 import idautils
 import idaapi
@@ -11,8 +11,20 @@ true = True
 false = False
 none = None
 
+def find_panic(base_ea):
+    pk_ea = ida_search.find_text(base_ea, 1, 1, "double panic in ", ida_search.SEARCH_DOWN)
+
+    if pk_ea != 0xffffffffffffffff:
+        for xref in idautils.XrefsTo(pk_ea):
+            func = idaapi.get_func(xref.frm)
+            print "\t[+] _panic = 0x%x" % (func.startEA)
+            idc.MakeName(func.startEA, "_panic")
+            return func.startEA
+
+    return 0xffffffffffffffff
+
 def find_macho_valid(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFEEDFACF)
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFACF)
     
     if ea_list[0] != 0xffffffffffffffff:
         func_ea = ida_funcs.get_func(ea_list[0]).start_ea
@@ -52,6 +64,7 @@ def find_interesting(base_ea):
     mv_ea = find_macho_valid(base_ea)
     ldk_ea = find_loaded_kernelcache(mv_ea)
     lk_ea = find_load_kernelcache(ldk_ea)
+    pk_ea = find_panic(base_ea)
 
 def accept_file(fd, fname):
     version = 0
