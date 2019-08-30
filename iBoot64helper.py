@@ -1,4 +1,4 @@
-# argp@census-labs.com, Mon 29 Jul 2019 01:26:44 PM EEST
+# argp@census-labs.com, Fri 30 Aug 2019 05:22:45 PM EEST
 
 import idautils
 import idaapi
@@ -59,12 +59,25 @@ def find_load_kernelcache(ea):
 
     return 0xffffffffffffffff
 
+def find_do_go(base_ea):
+    str_ea = ida_search.find_text(base_ea, 1, 1, "jumping into image at ", ida_search.SEARCH_DOWN)
+
+    if str_ea != 0xffffffffffffffff:
+        for xref in idautils.XrefsTo(str_ea):
+            func = idaapi.get_func(xref.frm)
+            print "\t[+] _do_go = 0x%x" % (func.startEA)
+            idc.MakeName(func.startEA, "_do_go")
+            return func.startEA
+
+    return 0xffffffffffffffff
+
 def find_interesting(base_ea):
 
     mv_ea = find_macho_valid(base_ea)
     ldk_ea = find_loaded_kernelcache(mv_ea)
     lk_ea = find_load_kernelcache(ldk_ea)
     pk_ea = find_panic(base_ea)
+    go_ea = find_do_go(base_ea)
 
 def accept_file(fd, fname):
     version = 0
