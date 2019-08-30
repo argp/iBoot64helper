@@ -23,6 +23,18 @@ def find_panic(base_ea):
 
     return 0xffffffffffffffff
 
+def find_aes_crypto_cmd(base_ea):
+    aes_ea = ida_search.find_text(base_ea, 1, 1, "aes_crypto_cmd", ida_search.SEARCH_DOWN)
+
+    if aes_ea != 0xffffffffffffffff:
+        for xref in idautils.XrefsTo(aes_ea):
+            func = idaapi.get_func(xref.frm)
+            print "\t[+] _aes_crypto_cmd = 0x%x" % (func.startEA)
+            idc.MakeName(func.startEA, "_aes_crypto_cmd")
+            return func.startEA
+
+    return 0xffffffffffffffff
+
 def find_macho_valid(base_ea):
     ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFACF)
     
@@ -78,6 +90,7 @@ def find_interesting(base_ea):
     lk_ea = find_load_kernelcache(ldk_ea)
     pk_ea = find_panic(base_ea)
     go_ea = find_do_go(base_ea)
+    aes_ea = find_aes_crypto_cmd(base_ea)
 
 def accept_file(fd, fname):
     version = 0
