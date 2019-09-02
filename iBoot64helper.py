@@ -72,7 +72,7 @@ def find_load_kernelcache(ea):
     return 0xffffffffffffffff
 
 def find_do_go(base_ea):
-    str_ea = ida_search.find_text(base_ea, 1, 1, "jumping into image at ", ida_search.SEARCH_DOWN)
+    str_ea = ida_search.find_text(base_ea, 1, 1, "Memory image not valid", ida_search.SEARCH_DOWN)
 
     if str_ea != 0xffffffffffffffff:
         for xref in idautils.XrefsTo(str_ea):
