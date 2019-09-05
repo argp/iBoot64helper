@@ -5,7 +5,7 @@
 **iBoot64helper** is now an IDA loader!
 
 Just copy *iBoot64helper.py* to your *~/.idapro/loaders/* (or your *IDA/loaders/*)
-directory, launch IDA, and open a *decrypted* iBoot or iBEC binary image.
+directory, launch IDA, and open a *decrypted* iBoot or iBEC (or SecureROM) binary image.
 
 <p align="center"><img src="screenshot-loader.png"/></p>
 
