@@ -42,7 +42,6 @@ def find_macho_valid(base_ea):
         func_ea = ida_funcs.get_func(ea_list[0]).start_ea
         print "\t[+] _macho_valid = 0x%x" % (func_ea)
         idc.MakeName(func_ea, "_macho_valid")
-
         return func_ea
 
     return 0xffffffffffffffff
@@ -54,7 +53,6 @@ def find_loaded_kernelcache(ea):
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
         print "\t[+] _loaded_kernelcache = 0x%x" % (func_ea)
         idc.MakeName(func_ea, "_loaded_kernelcache")
-
         return func_ea
 
     return 0xffffffffffffffff
@@ -66,7 +64,6 @@ def find_load_kernelcache(ea):
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
         print "\t[+] _load_kernelcache = 0x%x" % (func_ea)
         idc.MakeName(func_ea, "_load_kernelcache")
-
         return func_ea
 
     return 0xffffffffffffffff
