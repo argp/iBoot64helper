@@ -19,7 +19,7 @@ def find_panic(base_ea):
     if pk_ea != 0xffffffffffffffff:
         for xref in idautils.XrefsTo(pk_ea):
             func = idaapi.get_func(xref.frm)
-            print "\t[+] _panic = 0x%x" % (func.startEA)
+            print("\t[+] _panic = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_panic")
             return func.startEA
 
@@ -31,7 +31,7 @@ def find_aes_crypto_cmd(base_ea):
     if aes_ea != 0xffffffffffffffff:
         for xref in idautils.XrefsTo(aes_ea):
             func = idaapi.get_func(xref.frm)
-            print "\t[+] _aes_crypto_cmd = 0x%x" % (func.startEA)
+            print("\t[+] _aes_crypto_cmd = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_aes_crypto_cmd")
             return func.startEA
 
@@ -43,7 +43,7 @@ def find_update_device_tree(base_ea):
     if udt_ea != 0xffffffffffffffff:
         for xref in idautils.XrefsTo(udt_ea):
             func = idaapi.get_func(xref.frm)
-            print "\t[+] _UpdateDeviceTree = 0x%x" % (func.startEA)
+            print("\t[+] _UpdateDeviceTree = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_UpdateDeviceTree")
             return func.startEA
 
@@ -54,7 +54,7 @@ def find_macho_valid(base_ea):
     
     if ea_list[0] != 0xffffffffffffffff:
         func_ea = ida_funcs.get_func(ea_list[0]).start_ea
-        print "\t[+] _macho_valid = 0x%x" % (func_ea)
+        print("\t[+] _macho_valid = 0x%x" % (func_ea))
         idc.MakeName(func_ea, "_macho_valid")
         return func_ea
 
@@ -65,7 +65,7 @@ def find_loaded_kernelcache(ea):
 
     if ea_list[0].frm != 0xffffffffffffffff:
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
-        print "\t[+] _loaded_kernelcache = 0x%x" % (func_ea)
+        print("\t[+] _loaded_kernelcache = 0x%x" % (func_ea))
         idc.MakeName(func_ea, "_loaded_kernelcache")
         return func_ea
 
@@ -76,7 +76,7 @@ def find_load_kernelcache(ea):
 
     if ea_list[0].frm != 0xffffffffffffffff:
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
-        print "\t[+] _load_kernelcache = 0x%x" % (func_ea)
+        print("\t[+] _load_kernelcache = 0x%x" % (func_ea))
         idc.MakeName(func_ea, "_load_kernelcache")
         return func_ea
 
@@ -88,9 +88,30 @@ def find_do_go(base_ea):
     if str_ea != 0xffffffffffffffff:
         for xref in idautils.XrefsTo(str_ea):
             func = idaapi.get_func(xref.frm)
-            print "\t[+] _do_go = 0x%x" % (func.startEA)
+            print("\t[+] _do_go = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_do_go")
             return func.startEA
+
+    return 0xffffffffffffffff
+
+def find_macho_load(base_ea):
+    pz_ea = idc.LocByName("aPagezero")
+
+    if pz_ea != 0xffffffffffffffff:
+        if len(list(idautils.XrefsTo(pz_ea))) != 3:
+            return 0xffffffffffffffff
+
+        func1_ea = idaapi.get_func(list(idautils.XrefsTo(pz_ea))[0].frm).startEA
+        func2_ea = idaapi.get_func(list(idautils.XrefsTo(pz_ea))[1].frm).startEA
+        func3_ea = idaapi.get_func(list(idautils.XrefsTo(pz_ea))[2].frm).startEA
+
+        if func2_ea != func3_ea:
+            return 0xffffffffffffffff
+
+        if func1_ea != func2_ea:
+            print("\t[+] _macho_load = 0x%x" % (func2_ea))
+            idc.MakeName(func2_ea, "_macho_load")
+            return func2_ea
 
     return 0xffffffffffffffff
 
@@ -103,6 +124,7 @@ def find_interesting(base_ea):
     go_ea = find_do_go(base_ea)
     aes_ea = find_aes_crypto_cmd(base_ea)
     udt_ea = find_update_device_tree(base_ea)
+    ml_ea = find_macho_load(base_ea)
 
 def accept_file(fd, fname):
     version = 0
