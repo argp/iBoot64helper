@@ -1,4 +1,4 @@
-# argp@census-labs.com, Fri 30 Aug 2019 05:22:45 PM EEST
+# argp@census-labs.com
 
 import idautils
 import idaapi
@@ -10,6 +10,8 @@ import struct
 true = True
 false = False
 none = None
+
+prologues = ["BD A9", "BF A9"]
 
 def find_panic(base_ea):
     pk_ea = ida_search.find_text(base_ea, 1, 1, "double panic in ", ida_search.SEARCH_DOWN)
@@ -31,6 +33,18 @@ def find_aes_crypto_cmd(base_ea):
             func = idaapi.get_func(xref.frm)
             print "\t[+] _aes_crypto_cmd = 0x%x" % (func.startEA)
             idc.MakeName(func.startEA, "_aes_crypto_cmd")
+            return func.startEA
+
+    return 0xffffffffffffffff
+
+def find_update_device_tree(base_ea):
+    udt_ea = ida_search.find_text(base_ea, 1, 1, "development-cert", ida_search.SEARCH_DOWN)
+
+    if udt_ea != 0xffffffffffffffff:
+        for xref in idautils.XrefsTo(udt_ea):
+            func = idaapi.get_func(xref.frm)
+            print "\t[+] _UpdateDeviceTree = 0x%x" % (func.startEA)
+            idc.MakeName(func.startEA, "_UpdateDeviceTree")
             return func.startEA
 
     return 0xffffffffffffffff
@@ -88,6 +102,7 @@ def find_interesting(base_ea):
     pk_ea = find_panic(base_ea)
     go_ea = find_do_go(base_ea)
     aes_ea = find_aes_crypto_cmd(base_ea)
+    udt_ea = find_update_device_tree(base_ea)
 
 def accept_file(fd, fname):
     version = 0
@@ -104,9 +119,11 @@ def accept_file(fd, fname):
     return ret
 
 def load_file(fd, neflags, format):
+    global prologues
     size = 0
     base_addr = 0
     ea = 0
+    nfunc = 0
 
     idaapi.set_processor_type("arm", idaapi.SETPROC_ALL)
     idaapi.get_inf_structure().lflags |= idaapi.LFLG_64BIT
@@ -154,20 +171,24 @@ def load_file(fd, neflags, format):
 
     print("[+] Searching and defining functions")
 
-    while ea != idc.BADADDR:
-        ea = idc.FindBinary(ea, idc.SEARCH_DOWN, "BF A9", 16)
+    for prologue in prologues:
+        while ea != idc.BADADDR:
+            ea = idc.FindBinary(ea, idc.SEARCH_DOWN, prologue, 16)
             
-        if ea != idc.BADADDR:
-            ea = ea - 2
+            if ea != idc.BADADDR:
+                ea = ea - 2
 
-            if (ea % 4) == 0 and idc.GetFlags(ea) < 0x200:
-                # print("[+] Defining a function at 0x%x" % (ea))
-                idc.MakeFunction(ea)
+                if (ea % 4) == 0 and idc.GetFlags(ea) < 0x200:
+                    # print("[+] Defining a function at 0x%x" % (ea))
+                    idc.MakeFunction(ea)
+                    nfunc = nfunc + 1
 
-            ea = ea + 4
+                ea = ea + 4
     
     idc.AnalyzeArea(segment_start, segment_end)
     idaapi.autoWait()
+
+    print("[+] Identified %d new functions" % (nfunc))
 
     print("[+] Looking for interesting functions")
     find_interesting(segment_start)
