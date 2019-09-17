@@ -94,6 +94,18 @@ def find_do_go(base_ea):
 
     return 0xffffffffffffffff
 
+def find_pmgr_binning_mode_get_value(base_ea):
+    str_ea = ida_search.find_text(base_ea, 1, 1, "Invalid low", ida_search.SEARCH_DOWN)
+
+    if str_ea != 0xffffffffffffffff:
+        for xref in idautils.XrefsTo(str_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _pmgr_binning_mode_get_value = 0x%x" % (func.startEA))
+            idc.MakeName(func.startEA, "_pmgr_binning_mode_get_value")
+            return func.startEA
+
+    return 0xffffffffffffffff
+
 def find_macho_load(base_ea):
     pz_ea = idc.LocByName("aPagezero")
 
@@ -125,6 +137,7 @@ def find_interesting(base_ea):
     aes_ea = find_aes_crypto_cmd(base_ea)
     udt_ea = find_update_device_tree(base_ea)
     ml_ea = find_macho_load(base_ea)
+    pgv_ea = find_pmgr_binning_mode_get_value(base_ea)
 
 def accept_file(fd, fname):
     version = 0
