@@ -16,122 +16,128 @@ prologues = ["BD A9", "BF A9"]
 def find_panic(base_ea):
     pk_ea = ida_search.find_text(base_ea, 1, 1, "double panic in ", ida_search.SEARCH_DOWN)
 
-    if pk_ea != 0xffffffffffffffff:
+    if pk_ea != idaapi.BADADDR:
         for xref in idautils.XrefsTo(pk_ea):
             func = idaapi.get_func(xref.frm)
             print("\t[+] _panic = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_panic")
             return func.startEA
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_aes_crypto_cmd(base_ea):
     aes_ea = ida_search.find_text(base_ea, 1, 1, "aes_crypto_cmd", ida_search.SEARCH_DOWN)
 
-    if aes_ea != 0xffffffffffffffff:
+    if aes_ea != idaapi.BADADDR:
         for xref in idautils.XrefsTo(aes_ea):
             func = idaapi.get_func(xref.frm)
             print("\t[+] _aes_crypto_cmd = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_aes_crypto_cmd")
             return func.startEA
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_update_device_tree(base_ea):
     udt_ea = ida_search.find_text(base_ea, 1, 1, "development-cert", ida_search.SEARCH_DOWN)
 
-    if udt_ea != 0xffffffffffffffff:
+    if udt_ea != idaapi.BADADDR:
         for xref in idautils.XrefsTo(udt_ea):
             func = idaapi.get_func(xref.frm)
             print("\t[+] _UpdateDeviceTree = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_UpdateDeviceTree")
             return func.startEA
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_macho_valid(base_ea):
     ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFACF)
+
+    if ea_list[0] == idaapi.BADADDR:
+        ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFEEDFACF)
     
-    if ea_list[0] != 0xffffffffffffffff:
+    if ea_list[0] != idaapi.BADADDR:
         func_ea = ida_funcs.get_func(ea_list[0]).start_ea
         print("\t[+] _macho_valid = 0x%x" % (func_ea))
         idc.MakeName(func_ea, "_macho_valid")
         return func_ea
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_loaded_kernelcache(ea):
     ea_list = list(idautils.XrefsTo(ea))
 
-    if ea_list[0].frm != 0xffffffffffffffff:
+    if ea_list[0].frm != idaapi.BADADDR:
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
         print("\t[+] _loaded_kernelcache = 0x%x" % (func_ea))
         idc.MakeName(func_ea, "_loaded_kernelcache")
         return func_ea
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_load_kernelcache(ea):
     ea_list = list(idautils.XrefsTo(ea))
 
-    if ea_list[0].frm != 0xffffffffffffffff:
+    if ea_list[0].frm != idaapi.BADADDR:
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
         print("\t[+] _load_kernelcache = 0x%x" % (func_ea))
         idc.MakeName(func_ea, "_load_kernelcache")
         return func_ea
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_do_go(base_ea):
     str_ea = ida_search.find_text(base_ea, 1, 1, "Memory image not valid", ida_search.SEARCH_DOWN)
 
-    if str_ea != 0xffffffffffffffff:
+    if str_ea != idaapi.BADADDR:
         for xref in idautils.XrefsTo(str_ea):
             func = idaapi.get_func(xref.frm)
             print("\t[+] _do_go = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_do_go")
             return func.startEA
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_pmgr_binning_mode_get_value(base_ea):
     str_ea = ida_search.find_text(base_ea, 1, 1, "Invalid low", ida_search.SEARCH_DOWN)
 
-    if str_ea != 0xffffffffffffffff:
+    if str_ea != idaapi.BADADDR:
         for xref in idautils.XrefsTo(str_ea):
             func = idaapi.get_func(xref.frm)
             print("\t[+] _pmgr_binning_mode_get_value = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_pmgr_binning_mode_get_value")
             return func.startEA
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_macho_load(base_ea):
     pz_ea = idc.LocByName("aPagezero")
 
-    if pz_ea != 0xffffffffffffffff:
+    if pz_ea != idaapi.BADADDR:
         if len(list(idautils.XrefsTo(pz_ea))) != 3:
-            return 0xffffffffffffffff
+            return idaapi.BADADDR
 
         func1_ea = idaapi.get_func(list(idautils.XrefsTo(pz_ea))[0].frm).startEA
         func2_ea = idaapi.get_func(list(idautils.XrefsTo(pz_ea))[1].frm).startEA
         func3_ea = idaapi.get_func(list(idautils.XrefsTo(pz_ea))[2].frm).startEA
 
         if func2_ea != func3_ea:
-            return 0xffffffffffffffff
+            return idaapi.BADADDR
 
         if func1_ea != func2_ea:
             print("\t[+] _macho_load = 0x%x" % (func2_ea))
             idc.MakeName(func2_ea, "_macho_load")
             return func2_ea
 
-    return 0xffffffffffffffff
+    return idaapi.BADADDR
 
 def find_interesting(base_ea):
 
     mv_ea = find_macho_valid(base_ea)
-    ldk_ea = find_loaded_kernelcache(mv_ea)
-    lk_ea = find_load_kernelcache(ldk_ea)
+
+    if mv_ea != idaapi.BADADDR:
+        ldk_ea = find_loaded_kernelcache(mv_ea)
+        lk_ea = find_load_kernelcache(ldk_ea)
+    
     pk_ea = find_panic(base_ea)
     go_ea = find_do_go(base_ea)
     aes_ea = find_aes_crypto_cmd(base_ea)
