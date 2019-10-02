@@ -19,9 +19,6 @@ are recognized after running it on iBoot version 5540.0.129.
 
 <p align="center"><img src="screenshot.png"/></p>
 
-It's not much at this point, but hopefully it can help you start reversing
-the beast ;)
-
 I will be adding features to it, identifying more functions, etc.
 
 ## References

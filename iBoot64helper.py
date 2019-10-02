@@ -4,6 +4,7 @@ import idautils
 import idaapi
 import ida_search
 import ida_funcs
+import ida_segment
 import idc
 import struct
 
@@ -11,7 +12,7 @@ true = True
 false = False
 none = None
 
-prologues = ["BD A9", "BF A9"]
+prologues = ["BD A9", "BF A9", "7F 23 03 D5"]
 
 def find_panic(base_ea):
     pk_ea = ida_search.find_text(base_ea, 1, 1, "double panic in ", ida_search.SEARCH_DOWN)
@@ -22,6 +23,32 @@ def find_panic(base_ea):
             print("\t[+] _panic = 0x%x" % (func.startEA))
             idc.MakeName(func.startEA, "_panic")
             return func.startEA
+
+    return idaapi.BADADDR
+
+def find_image4_load(base_ea):
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x4D650000)
+
+    if ea_list[0] != idaapi.BADADDR:
+        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        print "\t[+] _image4_load = 0x%x" % (func_ea)
+        idc.MakeName(func_ea, "_image4_load")
+        return func_ea
+
+    return idaapi.BADADDR
+
+def find_img4decodeinit(base_ea):
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x494D0000)
+
+    if ea_list[0] != idaapi.BADADDR:
+        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        ea_func_list = list(idautils.XrefsTo(func_ea))
+
+        if ea_func_list[0].frm != idaapi.BADADDR:
+            i4d_ea = ida_funcs.get_func(ea_func_list[0].frm).start_ea
+            print "\t[+] _Img4DecodeInit = 0x%x" % (i4d_ea)
+            idc.MakeName(i4d_ea, "_Img4DecodeInit")
+            return i4d_ea
 
     return idaapi.BADADDR
 
@@ -109,6 +136,55 @@ def find_pmgr_binning_mode_get_value(base_ea):
 
     return idaapi.BADADDR
 
+def find_do_printf(base_ea):
+    str_ea = ida_search.find_text(base_ea, 1, 1, "<ptr>", ida_search.SEARCH_DOWN)
+
+    if str_ea != idaapi.BADADDR:
+        for xref in idautils.XrefsTo(str_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _do_printf = 0x%x" % (func.startEA))
+            idc.MakeName(func.startEA, "_do_printf")
+            return func.startEA
+
+    return idaapi.BADADDR
+
+def find_putchar(base_ea):
+    str_ea = idc.LocByName("aPanic")
+
+    if str_ea != idaapi.BADADDR:
+        apanic_ea = list(idautils.XrefsTo(str_ea))[0].frm
+
+        if apanic_ea == idaapi.BADADDR:
+            return idaapi.BADADDR
+
+        opnd0 = idc.GetOpnd(apanic_ea + 8, 0)
+        ins_str = idc.GetMnem(apanic_ea + 8)
+
+        if ins_str == "BL":
+            func_ea = idc.LocByName(opnd0)
+            ea = func_ea
+
+            while ea != idaapi.BADADDR:
+                ins_str = idc.GetMnem(ea)
+                
+                if ins_str == "ADD":
+                    opnd2 = idc.GetOpnd(ea, 2)
+                    
+                    if opnd2 == "#1":
+                        ins_ea = ea - 4
+                        opnd0 = idc.GetOpnd(ins_ea, 0)
+                        ins_str = idc.GetMnem(ins_ea)
+
+                        if ins_str == "BL":
+                            pc_ea = idc.LocByName(opnd0)
+                            print("\t[+] _putchar = 0x%x" % (pc_ea))
+                            idc.MakeName(pc_ea, "_putchar")
+                            return pc_ea
+
+                ea = ea + 4
+
+    return idaapi.BADADDR
+
 def find_macho_load(base_ea):
     pz_ea = idc.LocByName("aPagezero")
 
@@ -140,10 +216,23 @@ def find_interesting(base_ea):
     
     pk_ea = find_panic(base_ea)
     go_ea = find_do_go(base_ea)
+    pr_ea = find_do_printf(base_ea)
+    i4l_ea = find_image4_load(base_ea)
+    i4d_ea = find_img4decodeinit(base_ea)
     aes_ea = find_aes_crypto_cmd(base_ea)
     udt_ea = find_update_device_tree(base_ea)
     ml_ea = find_macho_load(base_ea)
     pgv_ea = find_pmgr_binning_mode_get_value(base_ea)
+
+    pc_ea = find_putchar(base_ea)
+
+    if pc_ea != idaapi.BADADDR and mv_ea == idaapi.BADADDR:
+        # this is a SecureROM image
+        segm = ida_segment.getseg(base_ea)
+
+        if segm:
+            idaapi.set_segm_name(segm, "SecureROM", 0)
+            print("[+] Identified as a SecureROM image")
 
 def accept_file(fd, fname):
     version = 0
