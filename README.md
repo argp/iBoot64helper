@@ -11,7 +11,7 @@ directory, launch IDA, and open a *decrypted* iBoot, iBEC, or SecureROM binary i
 
 This aims to become an IDAPython utility to help with iBoot and SecureROM reverse
 engineering. Currently it a) locates the image's proper loading address, b) rebases
-the image, c) identifies ARM64 functions based on a common function prologue, and
+the image, c) identifies functions based on common AArch64 function prologues, and
 d) finds and renames some interesting functions.
 
 As you can see in the screenshot below, 1920 functions
