@@ -148,6 +148,22 @@ def find_do_printf(base_ea):
 
     return idaapi.BADADDR
 
+def find_image4_get_partial(base_ea):
+    str_ea = idc.LocByName("aImg4")
+
+    if str_ea != idaapi.BADADDR:
+        aimg4_ea = list(idautils.XrefsTo(str_ea))[0].frm
+
+        if aimg4_ea == idaapi.BADADDR:
+            return idaapi.BADADDR
+
+        func = idaapi.get_func(aimg4_ea)
+        print("\t[+] _image4_get_partial = 0x%x" % (func.startEA))
+        idc.MakeName(func.startEA, "_image4_get_partial")
+        return func.startEA
+
+    return idaapi.BADADDR
+
 def find_putchar(base_ea):
     str_ea = idc.LocByName("aPanic")
 
@@ -223,6 +239,7 @@ def find_interesting(base_ea):
     udt_ea = find_update_device_tree(base_ea)
     ml_ea = find_macho_load(base_ea)
     pgv_ea = find_pmgr_binning_mode_get_value(base_ea)
+    i4p_ea = find_image4_get_partial(base_ea)
 
     pc_ea = find_putchar(base_ea)
 
