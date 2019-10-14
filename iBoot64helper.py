@@ -12,6 +12,14 @@ true = True
 false = False
 none = None
 
+kp_flag = false
+
+try:
+    import keypatch
+    kp_flag = true
+except:
+    pass
+
 prologues = ["BD A9", "BF A9", "7F 23 03 D5"]
 
 def find_panic(base_ea):
@@ -223,7 +231,6 @@ def find_macho_load(base_ea):
     return idaapi.BADADDR
 
 def find_interesting(base_ea):
-
     mv_ea = find_macho_valid(base_ea)
 
     if mv_ea != idaapi.BADADDR:
