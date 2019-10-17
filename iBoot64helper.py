@@ -72,6 +72,29 @@ def find_aes_crypto_cmd(base_ea):
 
     return idaapi.BADADDR
 
+def find_main_task(base_ea):
+    du_ea = ida_search.find_text(base_ea, 1, 1, "debug-uarts", ida_search.SEARCH_DOWN)
+
+    if du_ea != idaapi.BADADDR:
+        for xref in idautils.XrefsTo(du_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _main_task = 0x%x" % (func.startEA))
+            idc.MakeName(func.startEA, "_main_task")
+            return func.startEA
+
+    return idaapi.BADADDR
+
+def find_boot_check_panic(base_ea):
+    seq_ea = idc.FindBinary(base_ea, idc.SEARCH_DOWN, "1F ?? 03 71")
+
+    if seq_ea != idaapi.BADADDR:
+        func = idaapi.get_func(seq_ea)
+        print("\t[+] _boot_check_panic = 0x%x" % (func.startEA))
+        idc.MakeName(func.startEA, "_boot_check_panic")
+        return func.startEA
+
+    return idaapi.BADADDR
+
 def find_update_device_tree(base_ea):
     udt_ea = ida_search.find_text(base_ea, 1, 1, "development-cert", ida_search.SEARCH_DOWN)
 
@@ -247,6 +270,8 @@ def find_interesting(base_ea):
     ml_ea = find_macho_load(base_ea)
     pgv_ea = find_pmgr_binning_mode_get_value(base_ea)
     i4p_ea = find_image4_get_partial(base_ea)
+    mt_ea = find_main_task(base_ea)
+    bc_ea = find_boot_check_panic(base_ea)
 
     pc_ea = find_putchar(base_ea)
 
