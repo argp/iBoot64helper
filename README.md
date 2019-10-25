@@ -32,5 +32,5 @@ For decrypting images you should use [xerub's img4lib](https://github.com/xerub/
 the ultimate IMG4 utility.
 
 ## References
-[iOS RE Wiki](https://github.com/kpwn/iOSRE/blob/master/wiki/iBoot-RE.md)
-[img4lib](https://github.com/xerub/img4lib)
+* [iOS RE Wiki](https://github.com/kpwn/iOSRE/blob/master/wiki/iBoot-RE.md)
+* [img4lib](https://github.com/xerub/img4lib)
