@@ -21,5 +21,16 @@ are recognized after running it on iBoot version 5540.0.129.
 
 I will be adding features to it, identifying more functions, etc.
 
+## IDA support
+
+*iBoot64helper.py* now supports IDA 7.4 and lower versions (only tested with IDA's
+builtin IDAPython for Python 2.7).
+
+## Decrypting images
+
+For decrypting images you should use [xerub's img4lib](https://github.com/xerub/img4lib);
+the ultimate IMG4 utility.
+
 ## References
 [iOS RE Wiki](https://github.com/kpwn/iOSRE/blob/master/wiki/iBoot-RE.md)
+[img4lib](https://github.com/xerub/img4lib)
