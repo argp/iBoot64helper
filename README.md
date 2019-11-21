@@ -31,6 +31,13 @@ builtin IDAPython for Python 2.7).
 For decrypting images you should use [xerub's img4lib](https://github.com/xerub/img4lib);
 the ultimate IMG4 utility.
 
+## SecureROM
+
+If you have a device vulnerable to [axi0mX's checkm8](https://github.com/axi0mX/ipwndfu),
+you can use ```./ipwndfu --dump-rom``` to get a dump of the SecureROM image from your device
+and use it with *iBoot64helper*.
+
 ## References
 * [iOS RE Wiki](https://github.com/kpwn/iOSRE/blob/master/wiki/iBoot-RE.md)
 * [img4lib](https://github.com/xerub/img4lib)
+* [checkm8](https://github.com/axi0mX/ipwndfu)
