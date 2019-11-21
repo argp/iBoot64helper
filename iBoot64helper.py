@@ -215,10 +215,10 @@ def find_putchar(base_ea):
             ea = func_ea
 
             while ea != ida_idaapi.BADADDR:
-                ins_str = idc.GetMnem(ea)
+                ins_str = idc.print_insn_mnem(ea)
                 
                 if ins_str == "ADD":
-                    opnd2 = idc.GetOpnd(ea, 2)
+                    opnd2 = idc.print_operand(ea, 2)
                     
                     if opnd2 == "#1":
                         ins_ea = ea - 4
