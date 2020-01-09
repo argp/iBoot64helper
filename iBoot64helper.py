@@ -294,7 +294,14 @@ def accept_file(fd, fname):
         fd.seek(0x280)
         ver_str = fd.read(0x20)
 
-        if ver_str[:5] == "iBoot":
+        try:
+            # Python 3.x.
+            label = "".join(map(chr, ver_str[:5]))
+        except TypeError:
+            # Python 2.x.
+            label = ver_str[:5]
+
+        if "iBoot" == label:
             version = ver_str[6:] # for later
             ret = {"format" : "iBoot (AArch64)", "processor" : "arm"}
 
