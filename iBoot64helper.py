@@ -1,4 +1,4 @@
-# argp@census-labs.com
+__author__ = "argp@CENSUS-labs.com"
 
 import idautils
 import idaapi
@@ -8,6 +8,7 @@ import ida_funcs
 import ida_segment
 import ida_bytes
 import ida_idp
+import ida_pro
 import idc
 import struct
 
@@ -16,6 +17,7 @@ false = False
 none = None
 
 kp_flag = false
+br_flag = false
 
 try:
     import keypatch
@@ -37,19 +39,89 @@ def find_panic(base_ea):
 
     return ida_idaapi.BADADDR
 
-def find_image4_load(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x4D650000)
+def find_chipid_get_chip_revision(base_ea, base_end_ea):
+    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "00 21 06 33", 16, ida_search.SEARCH_DOWN)
 
-    if ea_list[0] != ida_idaapi.BADADDR:
-        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+    if seq_ea != ida_idaapi.BADADDR:
+        func = idaapi.get_func(seq_ea)
+        print("\t[+] _chipid_get_chip_revision = 0x%x" % (func.start_ea))
+        idc.set_name(func.start_ea, "_chipid_get_chip_revision", idc.SN_CHECK)
+        return func.start_ea
+
+    return ida_idaapi.BADADDR
+
+def find_platform_early_init(base_ea, base_end_ea):
+    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "60 02 40 39", 16, ida_search.SEARCH_DOWN)
+
+    if seq_ea != ida_idaapi.BADADDR:
+        func = idaapi.get_func(seq_ea)
+        print("\t[+] _platform_early_init = 0x%x" % (func.start_ea))
+        idc.set_name(func.start_ea, "_platform_early_init", idc.SN_CHECK)
+        return func.start_ea
+
+    return ida_idaapi.BADADDR
+
+def find_image4_validate_property_callback(base_ea, base_end_ea):
+    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "?? 77 00 51", 16, ida_search.SEARCH_DOWN)
+
+    if seq_ea != ida_idaapi.BADADDR:
+        func = idaapi.get_func(seq_ea)
+        print("\t[+] _image4_validate_property_callback = 0x%x" % (func.start_ea))
+        idc.set_name(func.start_ea, "_image4_validate_property_callback", idc.SN_CHECK)
+        return func.start_ea
+
+    return ida_idaapi.BADADDR
+
+def find_image4_load(ea):
+    ea_list = list(idautils.XrefsTo(ea))
+
+    if ea_list[0].frm != ida_idaapi.BADADDR:
+        func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
         print("\t[+] _image4_load = 0x%x" % (func_ea))
         idc.set_name(func_ea, "_image4_load", idc.SN_CHECK)
         return func_ea
 
     return ida_idaapi.BADADDR
 
+def find_image4_validate_property_callback_interposer(base_ea):
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x424E)
+
+    if ea_list[0] != ida_idaapi.BADADDR:
+        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        print("\t[+] _image4_validate_property_callback_interposer = 0x%x" % (func_ea))
+        idc.set_name(func_ea, "_image4_validate_property_callback_interposer", idc.SN_CHECK)
+        return func_ea
+
+    return ida_idaapi.BADADDR
+
+def find_image4_validate_property_callback_interposer_ptr(ea):
+    ea_list = list(idautils.XrefsTo(ea))
+
+    if ea_list[0].frm != ida_idaapi.BADADDR:
+        ptr_ea = ea_list[0].frm
+        print("\t[+] _image4_validate_property_callback_interposer_ptr = 0x%x" % (ptr_ea))
+        idc.set_name(ptr_ea, "_image4_validate_property_callback_interposer_ptr", idc.SN_CHECK)
+        
+        ptr_ea_list = list(idautils.XrefsTo(ptr_ea))
+        i4_hash_ptr_ea = ptr_ea_list[0].frm + 8
+
+        src = idc.print_operand(i4_hash_ptr_ea, 1)
+        i4_hash_ptr_ea = idc.get_name_ea_simple(src)
+        print("\t[+] _image4_hash_init_ptr = 0x%x" % (i4_hash_ptr_ea))
+        idc.set_name(i4_hash_ptr_ea, "_image4_hash_init_ptr", idc.SN_CHECK)
+
+        bl_ea = ptr_ea_list[0].frm + 8 + 16
+        dst = idc.print_operand(bl_ea, 0)
+        i4d_ea = idc.get_name_ea_simple(dst)
+        print("\t[+] _Img4DecodePerformTrustEvaluation = 0x%x" % (i4d_ea))
+        idc.set_name(i4d_ea, "_Img4DecodePerformTrustEvaluation", idc.SN_CHECK)
+
+        return ptr_ea
+
+    return ida_idaapi.BADADDR
+
 def find_img4decodeinit(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x494D0000)
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x494D)
 
     if ea_list[0] != ida_idaapi.BADADDR:
         func_ea = ida_funcs.get_func(ea_list[0]).start_ea
@@ -63,15 +135,39 @@ def find_img4decodeinit(base_ea):
 
     return ida_idaapi.BADADDR
 
-def find_aes_crypto_cmd(base_ea):
-    aes_ea = ida_search.find_text(base_ea, 1, 1, "aes_crypto_cmd", ida_search.SEARCH_DOWN)
+def find_target_early_init(base_ea):
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x4A41)
+
+    if ea_list[0] != ida_idaapi.BADADDR:
+        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        print("\t[+] _target_early_init = 0x%x" % (func_ea))
+        idc.set_name(func_ea, "_target_early_init", idc.SN_CHECK)
+        tei_ea = func_ea
+
+        str_ea = ida_search.find_text(tei_ea, 1, 1, "All pre", ida_search.SEARCH_DOWN)
+
+        if str_ea != ida_idaapi.BADADDR:
+            f_ea = idaapi.get_func(str_ea).start_ea
+
+            if tei_ea != f_ea:
+                return tei_ea
+
+            bl_ea = str_ea + 8
+            dst = idc.print_operand(bl_ea, 0)
+            pns_ea = idc.get_name_ea_simple(dst)
+            print("\t[+] _platform_not_supported = 0x%x" % (pns_ea))
+            idc.set_name(pns_ea, "_platform_not_supported", idc.SN_CHECK)
+
+    return ida_idaapi.BADADDR
+
+def find_aes_crypto_cmd(base_ea, base_end_ea):
+    aes_ea = ida_search.find_binary(base_ea, base_end_ea, "89 2C 00 72", 16, ida_search.SEARCH_DOWN)
 
     if aes_ea != ida_idaapi.BADADDR:
-        for xref in idautils.XrefsTo(aes_ea):
-            func = idaapi.get_func(xref.frm)
-            print("\t[+] _aes_crypto_cmd = 0x%x" % (func.start_ea))
-            idc.set_name(func.start_ea, "_aes_crypto_cmd", idc.SN_CHECK)
-            return func.start_ea
+        func = idaapi.get_func(aes_ea)
+        print("\t[+] _aes_crypto_cmd = 0x%x" % (func.start_ea))
+        idc.set_name(func.start_ea, "_aes_crypto_cmd", idc.SN_CHECK)
+        return func.start_ea
 
     return ida_idaapi.BADADDR
 
@@ -110,19 +206,88 @@ def find_update_device_tree(base_ea):
 
     return ida_idaapi.BADADDR
 
-def find_macho_valid(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFACF)
+def find_record_memory_range(base_ea):
+    rmr_ea = ida_search.find_text(base_ea, 1, 1, "chosen/memory-map", ida_search.SEARCH_DOWN)
 
-    if ea_list[0] == ida_idaapi.BADADDR:
-        ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0xFEEDFACF)
-    
-    if ea_list[0] != ida_idaapi.BADADDR:
-        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
-        print("\t[+] _macho_valid = 0x%x" % (func_ea))
-        idc.set_name(func_ea, "_macho_valid", idc.SN_CHECK)
-        return func_ea
+    if rmr_ea != ida_idaapi.BADADDR:
+        for xref in idautils.XrefsTo(rmr_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _record_memory_range = 0x%x" % (func.start_ea))
+            idc.set_name(func.start_ea, "_record_memory_range", idc.SN_CHECK)
+            return func.start_ea
 
     return ida_idaapi.BADADDR
+
+def find_macho_valid(base_ea, base_end_ea):
+    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "49 01 8B 9A", 16, ida_search.SEARCH_DOWN)
+
+    if seq_ea != ida_idaapi.BADADDR:
+        func = idaapi.get_func(seq_ea)
+        print("\t[+] _macho_valid = 0x%x" % (func.start_ea))
+        idc.set_name(func.start_ea, "_macho_valid", idc.SN_CHECK)
+        return func.start_ea
+
+    return ida_idaapi.BADADDR
+
+def find_stack_chk_fail(base_ea):
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x7CC8)
+
+    if ea_list[0] != ida_idaapi.BADADDR:
+        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        print("\t[+] _stack_chk_fail = 0x%x" % (func_ea))
+        idc.set_name(func_ea, "_stack_chk_fail", idc.SN_CHECK)
+        return func_ea
+    else:
+        str_ea = ida_search.find_text(base_ea, 1, 1, "__stack_chk_fail", ida_search.SEARCH_DOWN)
+
+        if str_ea != ida_idaapi.BADADDR:
+            for xref in idautils.XrefsTo(str_ea):
+                func = idaapi.get_func(xref.frm)
+                print("\t[+] _stack_chk_fail = 0x%x" % (func.start_ea))
+                idc.set_name(func.start_ea, "_stack_chk_fail", idc.SN_CHECK)
+                return func.start_ea
+
+    return ida_idaapi.BADADDR
+
+def find_platform_init_display(base_ea):
+    str_ea = idc.get_name_ea_simple("aBacklightLevel")
+
+    if str_ea != ida_idaapi.BADADDR:
+        for xref in idautils.XrefsTo(str_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _platform_init_display = 0x%x" % (func.start_ea))
+            idc.set_name(func.start_ea, "_platform_init_display", idc.SN_CHECK)
+
+            egu_ea = find_env_get_uint(xref.frm)
+            ege_ea = find_env_get_etc(egu_ea)
+
+            return func.start_ea
+
+    return ida_idaapi.BADADDR
+
+def find_env_get_uint(ea):
+    bl_ea = ea + 12
+    dst = idc.print_operand(bl_ea, 0)
+    egu_ea = idc.get_name_ea_simple(dst)
+    print("\t[+] _env_get_uint = 0x%x" % (egu_ea))
+    idc.set_name(egu_ea, "_env_get_uint", idc.SN_CHECK)
+
+    return egu_ea
+
+def find_env_get_etc(ea):
+    cur_ea = ea + 4
+
+    while true:
+        insn = idc.print_insn_mnem(cur_ea)
+        
+        if insn == "BL":
+            dst = idc.print_operand(cur_ea, 0)
+            ege_ea = idc.get_name_ea_simple(dst)
+            print("\t[+] _env_get_etc = 0x%x" % (ege_ea))
+            idc.set_name(ege_ea, "_env_get_etc", idc.SN_CHECK)
+            return ege_ea
+
+        cur_ea = cur_ea + 4
 
 def find_loaded_kernelcache(ea):
     ea_list = list(idautils.XrefsTo(ea))
@@ -138,23 +303,42 @@ def find_loaded_kernelcache(ea):
 def find_load_kernelcache(ea):
     ea_list = list(idautils.XrefsTo(ea))
 
+    if len(ea_list) >= 1:
+        if ea_list[0].frm != ida_idaapi.BADADDR:
+            func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
+            print("\t[+] _load_kernelcache = 0x%x" % (func_ea))
+            idc.set_name(func_ea, "_load_kernelcache", idc.SN_CHECK)
+            return func_ea
+
+    return ida_idaapi.BADADDR
+
+def find_load_kernelcache_object(ea):
+    ea_list = list(idautils.XrefsTo(ea))
+
     if ea_list[0].frm != ida_idaapi.BADADDR:
         func_ea = ida_funcs.get_func(ea_list[0].frm).start_ea
-        print("\t[+] _load_kernelcache = 0x%x" % (func_ea))
-        idc.set_name(func_ea, "_load_kernelcache", idc.SN_CHECK)
+        print("\t[+] _load_kernelcache_object = 0x%x" % (func_ea))
+        idc.set_name(func_ea, "_load_kernelcache_object", idc.SN_CHECK)
         return func_ea
 
     return ida_idaapi.BADADDR
 
 def find_do_go(base_ea):
-    str_ea = ida_search.find_text(base_ea, 1, 1, "Memory image not valid", ida_search.SEARCH_DOWN)
+    str_ea = idc.get_name_ea_simple("aCebilefciladrm")
 
     if str_ea != ida_idaapi.BADADDR:
         for xref in idautils.XrefsTo(str_ea):
+            # IDA messes up this function, so I find it this way:
             func = idaapi.get_func(xref.frm)
-            print("\t[+] _do_go = 0x%x" % (func.start_ea))
-            idc.set_name(func.start_ea, "_do_go", idc.SN_CHECK)
-            return func.start_ea
+
+            if func != none:
+                dg_ea = ida_search.find_binary(xref.frm, func.start_ea, prologues[0], 16, ida_search.SEARCH_UP)
+
+                if dg_ea != ida_idaapi.BADADDR:
+                    ida_funcs.add_func(dg_ea)
+                    print("\t[+] _do_go = 0x%x" % (dg_ea))
+                    idc.set_name(dg_ea, "_do_go", idc.SN_CHECK)
+                    return dg_ea
 
     return ida_idaapi.BADADDR
 
@@ -198,40 +382,14 @@ def find_image4_get_partial(base_ea):
 
     return ida_idaapi.BADADDR
 
-def find_putchar(base_ea):
-    str_ea = idc.get_name_ea_simple("aPanic")
+def find_putchar(base_ea, base_end_ea):
+    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "A0 01 80 52 ?? ?? FF 97 E0", 16, ida_search.SEARCH_DOWN)
 
-    if str_ea != ida_idaapi.BADADDR:
-        apanic_ea = list(idautils.XrefsTo(str_ea))[0].frm
-
-        if apanic_ea == ida_idaapi.BADADDR:
-            return ida_idaapi.BADADDR
-
-        opnd0 = idc.print_operand(apanic_ea + 8, 0)
-        ins_str = idc.print_insn_mnem(apanic_ea + 8)
-
-        if ins_str == "BL":
-            func_ea = idc.get_name_ea_simple(opnd0)
-            ea = func_ea
-
-            while ea != ida_idaapi.BADADDR:
-                ins_str = idc.print_insn_mnem(ea)
-                
-                if ins_str == "ADD":
-                    opnd2 = idc.print_operand(ea, 2)
-                    
-                    if opnd2 == "#1":
-                        ins_ea = ea - 4
-                        opnd0 = idc.print_operand(ins_ea, 0)
-                        ins_str = idc.print_insn_mnem(ins_ea)
-
-                        if ins_str == "BL":
-                            pc_ea = idc.get_name_ea_simple(opnd0)
-                            print("\t[+] _putchar = 0x%x" % (pc_ea))
-                            idc.set_name(pc_ea, "_putchar", idc.SN_CHECK)
-                            return pc_ea
-
-                ea = ea + 4
+    if seq_ea != ida_idaapi.BADADDR:
+        func = idaapi.get_func(seq_ea)
+        print("\t[+] _putchar = 0x%x" % (func.start_ea))
+        idc.set_name(func.start_ea, "_putchar", idc.SN_CHECK)
+        return func.start_ea
 
     return ida_idaapi.BADADDR
 
@@ -257,58 +415,92 @@ def find_macho_load(base_ea):
     return ida_idaapi.BADADDR
 
 def find_interesting(base_ea, base_end):
-    mv_ea = find_macho_valid(base_ea)
+    mv_ea = find_macho_valid(base_ea, base_end)
 
     if mv_ea != ida_idaapi.BADADDR:
         ldk_ea = find_loaded_kernelcache(mv_ea)
-        lk_ea = find_load_kernelcache(ldk_ea)
+
+        if ldk_ea != ida_idaapi.BADADDR:
+            lk_ea = find_load_kernelcache(ldk_ea)
     
     pk_ea = find_panic(base_ea)
     go_ea = find_do_go(base_ea)
     pr_ea = find_do_printf(base_ea)
-    i4l_ea = find_image4_load(base_ea)
+
+    i4vc_ea = find_image4_validate_property_callback(base_ea, base_end)
+
+    if i4vc_ea != ida_idaapi.BADADDR:
+        i4l_ea = find_image4_load(i4vc_ea)
+
+    i4i_ea = find_image4_validate_property_callback_interposer(base_ea)
+
+    if i4i_ea != ida_idaapi.BADADDR:
+        i4ip_ea = find_image4_validate_property_callback_interposer_ptr(i4i_ea)
+
+    rmr_ea = find_record_memory_range(base_ea)
     i4d_ea = find_img4decodeinit(base_ea)
-    aes_ea = find_aes_crypto_cmd(base_ea)
+    scf_ea = find_stack_chk_fail(base_ea)
+    aes_ea = find_aes_crypto_cmd(base_ea, base_end)
     udt_ea = find_update_device_tree(base_ea)
+    
     ml_ea = find_macho_load(base_ea)
+
+    if ml_ea != ida_idaapi.BADADDR:
+        lko_ea = find_load_kernelcache_object(ml_ea)
+
     pgv_ea = find_pmgr_binning_mode_get_value(base_ea)
     i4p_ea = find_image4_get_partial(base_ea)
     mt_ea = find_main_task(base_ea)
+    tei_ea = find_target_early_init(base_ea)
     bc_ea = find_boot_check_panic(base_ea, base_end)
+    pei_ea = find_platform_early_init(base_ea, base_end)
+    crv_ea = find_chipid_get_chip_revision(base_ea, base_end)
+    pid_ea = find_platform_init_display(base_ea)
 
-    pc_ea = find_putchar(base_ea)
+    pc_ea = find_putchar(base_ea, base_end)
+    
+    # just to be sure
+    if br_flag == false:
+        if pc_ea != ida_idaapi.BADADDR and mv_ea == ida_idaapi.BADADDR:
+            # this is a SecureROM image
+            segm = ida_segment.getseg(base_ea)
 
-    if pc_ea != ida_idaapi.BADADDR and mv_ea == ida_idaapi.BADADDR:
-        # this is a SecureROM image
-        segm = ida_segment.getseg(base_ea)
-
-        if segm:
-            idaapi.set_segm_name(segm, "SecureROM", 0)
-            print("[+] Identified as a SecureROM image")
+            if segm:
+                idaapi.set_segm_name(segm, "SecureROM", 0)
+                print("[+] Identified as a SecureROM image")
 
 def accept_file(fd, fname):
+    global br_flag
     version = 0
     ret = 0
 
     if type(fname) == str:
+        fd.seek(0x200)
+        ver_bin = fd.read(0x30)
+
+        ver_str = ver_bin.decode()
+        ver_str = "%s" % (ver_str)
+
+        if ver_str[:9] == "SecureROM":
+            ret = {"format" : "SecureROM (AArch64)", "processor" : "arm"}
+            br_flag = true
+            return ret
+
         fd.seek(0x280)
-        ver_str = fd.read(0x20)
+        ver_bin = fd.read(0x20)
 
-        try:
-            # Python 3.x.
-            label = "".join(map(chr, ver_str[:5]))
-        except TypeError:
-            # Python 2.x.
-            label = ver_str[:5]
+        ver_str = ver_bin.decode()
+        ver_str = "%s" % (ver_str)
 
-        if "iBoot" == label:
+        if ver_str[:5] == "iBoot":
             version = ver_str[6:] # for later
             ret = {"format" : "iBoot (AArch64)", "processor" : "arm"}
-
+            
     return ret
 
 def load_file(fd, neflags, format):
     global prologues
+    global br_flag
     size = 0
     base_addr = 0
     ea = 0
@@ -327,7 +519,11 @@ def load_file(fd, neflags, format):
     segm.bitness = 2 # 64-bit
     segm.start_ea = 0
     segm.end_ea = size
-    idaapi.add_segm_ex(segm, "iBoot", "CODE", idaapi.ADDSEG_OR_DIE)
+
+    if br_flag == false:
+        idaapi.add_segm_ex(segm, "iBoot", "CODE", idaapi.ADDSEG_OR_DIE)
+    else:
+        idaapi.add_segm_ex(segm, "SecureROM", "CODE", idaapi.ADDSEG_OR_DIE)
 
     fd.seek(0)
     fd.file2base(0, 0, size, false)
@@ -382,5 +578,23 @@ def load_file(fd, neflags, format):
     find_interesting(segment_start, segment_end)
 
     return 1
+
+# for easy testing
+if __name__ == "__main__":
+    print("[+] find_interesting():")
+
+    for seg in idautils.Segments():
+        st = ida_segment.getseg(seg)
+        name = idaapi.get_segm_name(st)
+
+        if name == "iBoot" or name == "SecureROM" or name == "iBEC" \
+                or name == "BootRom" or name == "LLB":
+
+            segm_start = st.start_ea
+            segm_end = idc.get_segm_attr(segm_start, idc.SEGATTR_END)
+            find_interesting(segm_start, segm_end)
+            break
+
+    # ida_pro.qexit()
 
 # EOF
