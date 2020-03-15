@@ -481,8 +481,11 @@ def accept_file(fd, fname):
         fd.seek(0x200)
         ver_bin = fd.read(0x30)
 
-        ver_str = ver_bin.decode()
-        ver_str = "%s" % (ver_str)
+        try:
+            ver_str = ver_bin.decode()
+            ver_str = "%s" % (ver_str)
+        except:
+            return ret
 
         if ver_str[:9] == "SecureROM":
             ret = {"format" : "SecureROM (AArch64)", "processor" : "arm"}
@@ -492,8 +495,11 @@ def accept_file(fd, fname):
         fd.seek(0x280)
         ver_bin = fd.read(0x20)
 
-        ver_str = ver_bin.decode()
-        ver_str = "%s" % (ver_str)
+        try:
+            ver_str = ver_bin.decode()
+            ver_str = "%s" % (ver_str)
+        except:
+            return ret
 
         if ver_str[:5] == "iBoot":
             version = ver_str[6:] # for later
