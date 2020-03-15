@@ -334,6 +334,9 @@ def find_do_go(base_ea):
             if func != none:
                 dg_ea = ida_search.find_binary(xref.frm, func.start_ea, prologues[0], 16, ida_search.SEARCH_UP)
 
+                if dg_ea == ida_idaapi.BADADDR:
+                    dg_ea = ida_search.find_binary(xref.frm, func.start_ea, "FF ?? ?? D1", 16, ida_search.SEARCH_UP)
+
                 if dg_ea != ida_idaapi.BADADDR:
                     ida_funcs.add_func(dg_ea)
                     print("\t[+] _do_go = 0x%x" % (dg_ea))
