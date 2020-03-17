@@ -37,6 +37,7 @@ def find_panic(base_ea):
             idc.set_name(func.start_ea, "_panic", idc.SN_CHECK)
             return func.start_ea
 
+    print("\t[-] _panic = not found")
     return ida_idaapi.BADADDR
 
 def find_chipid_get_chip_revision(base_ea, base_end_ea):
@@ -48,6 +49,7 @@ def find_chipid_get_chip_revision(base_ea, base_end_ea):
         idc.set_name(func.start_ea, "_chipid_get_chip_revision", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _chipid_get_chip_revision = not found")
     return ida_idaapi.BADADDR
 
 def find_platform_early_init(base_ea, base_end_ea):
@@ -59,17 +61,26 @@ def find_platform_early_init(base_ea, base_end_ea):
         idc.set_name(func.start_ea, "_platform_early_init", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _platform_early_init = not found")
     return ida_idaapi.BADADDR
 
-def find_image4_validate_property_callback(base_ea, base_end_ea):
+def find_image4_validate_property_callback(base_ea, base_end_ea, ptr_ea):
     seq_ea = ida_search.find_binary(base_ea, base_end_ea, "?? 77 00 51", 16, ida_search.SEARCH_DOWN)
+    func = none
 
     if seq_ea != ida_idaapi.BADADDR:
         func = idaapi.get_func(seq_ea)
+    else:
+        for xref in idautils.XrefsTo(ptr_ea):
+            func = idaapi.get_func(xref.frm)
+            break
+
+    if func:
         print("\t[+] _image4_validate_property_callback = 0x%x" % (func.start_ea))
         idc.set_name(func.start_ea, "_image4_validate_property_callback", idc.SN_CHECK)
         return func.start_ea
-
+        
+    print("\t[-] _image4_validate_property_callback = not found")
     return ida_idaapi.BADADDR
 
 def find_image4_load(ea):
@@ -81,6 +92,7 @@ def find_image4_load(ea):
         idc.set_name(func_ea, "_image4_load", idc.SN_CHECK)
         return func_ea
 
+    print("\t[-] _image4_load = not found")
     return ida_idaapi.BADADDR
 
 def find_image4_validate_property_callback_interposer(base_ea):
@@ -92,6 +104,7 @@ def find_image4_validate_property_callback_interposer(base_ea):
         idc.set_name(func_ea, "_image4_validate_property_callback_interposer", idc.SN_CHECK)
         return func_ea
 
+    print("\t[-] _image4_validate_property_callback_interposer = not found")
     return ida_idaapi.BADADDR
 
 def find_image4_validate_property_callback_interposer_ptr(ea):
@@ -118,21 +131,47 @@ def find_image4_validate_property_callback_interposer_ptr(ea):
 
         return ptr_ea
 
+    print("\t[-] _image4_validate_property_callback_interposer_ptr = not found")
+    print("\t[-] _image4_hash_init_ptr = not found")
+    print("\t[-] _Img4DecodePerformTrustEvaluation = not found")
     return ida_idaapi.BADADDR
 
 def find_img4decodeinit(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x494D)
+    cur_ea = base_ea
 
-    if ea_list[0] != ida_idaapi.BADADDR:
-        func_ea = ida_funcs.get_func(ea_list[0]).start_ea
-        ea_func_list = list(idautils.XrefsTo(func_ea))
+    while true:
+        ea, meh = ida_search.find_imm(cur_ea, ida_search.SEARCH_DOWN, 0x494D)
 
-        if ea_func_list[0].frm != ida_idaapi.BADADDR:
-            i4d_ea = ida_funcs.get_func(ea_func_list[0].frm).start_ea
-            print("\t[+] _Img4DecodeInit = 0x%x" % (i4d_ea))
-            idc.set_name(i4d_ea, "_Img4DecodeInit", idc.SN_CHECK)
-            return i4d_ea
+        if ea != ida_idaapi.BADADDR:
+            func = ida_funcs.get_func(ea)
+            func_ea = 0
 
+            if not func:
+                func_ea = ida_search.find_binary(ea, base_ea, "?? ?? BD A9", 16, ida_search.SEARCH_UP)
+
+                if func_ea != ida_idaapi.BADADDR:
+                    ida_funcs.add_func(func_ea)
+                else:
+                    print("\t[-] _Img4DecodeInit = not found")
+                    return ida_idaapi.BADADDR
+            else:
+                func_ea = func.start_ea
+
+            ea_func_list = list(idautils.XrefsTo(func_ea))
+            
+            if not ea_func_list:
+                cur_ea = ea + 4
+                continue
+
+            if ea_func_list[0].frm != ida_idaapi.BADADDR:
+                i4d_ea = ida_funcs.get_func(ea_func_list[0].frm).start_ea
+                print("\t[+] _Img4DecodeInit = 0x%x" % (i4d_ea))
+                idc.set_name(i4d_ea, "_Img4DecodeInit", idc.SN_CHECK)
+                return i4d_ea
+
+        cur_ea = ea + 4
+
+    print("\t[-] _Img4DecodeInit = not found")
     return ida_idaapi.BADADDR
 
 def find_target_early_init(base_ea):
@@ -150,6 +189,7 @@ def find_target_early_init(base_ea):
             f_ea = idaapi.get_func(str_ea).start_ea
 
             if tei_ea != f_ea:
+                print("\t[-] _platform_not_supported = not found")
                 return tei_ea
 
             bl_ea = str_ea + 8
@@ -157,7 +197,9 @@ def find_target_early_init(base_ea):
             pns_ea = idc.get_name_ea_simple(dst)
             print("\t[+] _platform_not_supported = 0x%x" % (pns_ea))
             idc.set_name(pns_ea, "_platform_not_supported", idc.SN_CHECK)
+            return tei_ea
 
+    print("\t[-] _target_early_init = not found")
     return ida_idaapi.BADADDR
 
 def find_aes_crypto_cmd(base_ea, base_end_ea):
@@ -169,6 +211,7 @@ def find_aes_crypto_cmd(base_ea, base_end_ea):
         idc.set_name(func.start_ea, "_aes_crypto_cmd", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _aes_crypto_cmd = not found")
     return ida_idaapi.BADADDR
 
 def find_main_task(base_ea):
@@ -181,6 +224,7 @@ def find_main_task(base_ea):
             idc.set_name(func.start_ea, "_main_task", idc.SN_CHECK)
             return func.start_ea
 
+    print("\t[-] _main_task = not found")
     return ida_idaapi.BADADDR
 
 def find_boot_check_panic(base_ea, base_end_ea):
@@ -192,6 +236,7 @@ def find_boot_check_panic(base_ea, base_end_ea):
         idc.set_name(func.start_ea, "_boot_check_panic", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _boot_check_panic = not found")
     return ida_idaapi.BADADDR
 
 def find_update_device_tree(base_ea):
@@ -204,6 +249,7 @@ def find_update_device_tree(base_ea):
             idc.set_name(func.start_ea, "_UpdateDeviceTree", idc.SN_CHECK)
             return func.start_ea
 
+    print("\t[-] _UpdateDeviceTree = not found")
     return ida_idaapi.BADADDR
 
 def find_record_memory_range(base_ea):
@@ -216,6 +262,7 @@ def find_record_memory_range(base_ea):
             idc.set_name(func.start_ea, "_record_memory_range", idc.SN_CHECK)
             return func.start_ea
 
+    print("\t[-] _record_memory_range = not found")
     return ida_idaapi.BADADDR
 
 def find_macho_valid(base_ea, base_end_ea):
@@ -227,6 +274,7 @@ def find_macho_valid(base_ea, base_end_ea):
         idc.set_name(func.start_ea, "_macho_valid", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _macho_valid = not found")
     return ida_idaapi.BADADDR
 
 def find_stack_chk_fail(base_ea):
@@ -247,6 +295,7 @@ def find_stack_chk_fail(base_ea):
                 idc.set_name(func.start_ea, "_stack_chk_fail", idc.SN_CHECK)
                 return func.start_ea
 
+    print("\t[-] _stack_chk_fail = not found")
     return ida_idaapi.BADADDR
 
 def find_platform_init_display(base_ea):
@@ -259,20 +308,27 @@ def find_platform_init_display(base_ea):
             idc.set_name(func.start_ea, "_platform_init_display", idc.SN_CHECK)
 
             egu_ea = find_env_get_uint(xref.frm)
-            ege_ea = find_env_get_etc(egu_ea)
+
+            if egu_ea != ida_idaapi.BADADDR:
+                ege_ea = find_env_get_etc(egu_ea)
 
             return func.start_ea
 
+    print("\t[-] _platform_init_display = not found")
     return ida_idaapi.BADADDR
 
 def find_env_get_uint(ea):
     bl_ea = ea + 12
     dst = idc.print_operand(bl_ea, 0)
     egu_ea = idc.get_name_ea_simple(dst)
-    print("\t[+] _env_get_uint = 0x%x" % (egu_ea))
-    idc.set_name(egu_ea, "_env_get_uint", idc.SN_CHECK)
 
-    return egu_ea
+    if egu_ea != ida_idaapi.BADADDR:
+        print("\t[+] _env_get_uint = 0x%x" % (egu_ea))
+        idc.set_name(egu_ea, "_env_get_uint", idc.SN_CHECK)
+        return egu_ea
+
+    print("\t[-] _env_get_uint = not found")
+    return ida_idaapi.BADADDR
 
 def find_env_get_etc(ea):
     cur_ea = ea + 4
@@ -287,7 +343,13 @@ def find_env_get_etc(ea):
             idc.set_name(ege_ea, "_env_get_etc", idc.SN_CHECK)
             return ege_ea
 
+        if cur_ea > ea + (4 * 20):
+            break
+
         cur_ea = cur_ea + 4
+
+    print("\t[-] _env_get_etc = not found")
+    return ida_idaapi.BADADDR
 
 def find_loaded_kernelcache(ea):
     ea_list = list(idautils.XrefsTo(ea))
@@ -298,6 +360,7 @@ def find_loaded_kernelcache(ea):
         idc.set_name(func_ea, "_loaded_kernelcache", idc.SN_CHECK)
         return func_ea
 
+    print("\t[-] _loaded_kernelcache = not found")
     return ida_idaapi.BADADDR
 
 def find_load_kernelcache(ea):
@@ -310,6 +373,7 @@ def find_load_kernelcache(ea):
             idc.set_name(func_ea, "_load_kernelcache", idc.SN_CHECK)
             return func_ea
 
+    print("\t[-] _load_kernelcache = not found")
     return ida_idaapi.BADADDR
 
 def find_load_kernelcache_object(ea):
@@ -321,6 +385,7 @@ def find_load_kernelcache_object(ea):
         idc.set_name(func_ea, "_load_kernelcache_object", idc.SN_CHECK)
         return func_ea
 
+    print("\t[-] _load_kernelcache_object = not found")
     return ida_idaapi.BADADDR
 
 def find_do_go(base_ea):
@@ -330,6 +395,7 @@ def find_do_go(base_ea):
         for xref in idautils.XrefsTo(str_ea):
             # IDA messes up this function, so I find it this way:
             func = idaapi.get_func(xref.frm)
+            dg_ea = 0
 
             if func != none:
                 dg_ea = ida_search.find_binary(xref.frm, func.start_ea, prologues[0], 16, ida_search.SEARCH_UP)
@@ -337,12 +403,15 @@ def find_do_go(base_ea):
                 if dg_ea == ida_idaapi.BADADDR:
                     dg_ea = ida_search.find_binary(xref.frm, func.start_ea, "FF ?? ?? D1", 16, ida_search.SEARCH_UP)
 
-                if dg_ea != ida_idaapi.BADADDR:
-                    ida_funcs.add_func(dg_ea)
-                    print("\t[+] _do_go = 0x%x" % (dg_ea))
-                    idc.set_name(dg_ea, "_do_go", idc.SN_CHECK)
-                    return dg_ea
+            else:
+                dg_ea = ida_search.find_binary(xref.frm, base_ea, "FF ?? ?? D1", 16, ida_search.SEARCH_UP)
 
+            ida_funcs.add_func(dg_ea)
+            print("\t[+] _do_go = 0x%x" % (dg_ea))
+            idc.set_name(dg_ea, "_do_go", idc.SN_CHECK)
+            return dg_ea
+
+    print("\t[-] _do_go = not found")
     return ida_idaapi.BADADDR
 
 def find_pmgr_binning_mode_get_value(base_ea):
@@ -355,6 +424,7 @@ def find_pmgr_binning_mode_get_value(base_ea):
             idc.set_name(func.start_ea, "_pmgr_binning_mode_get_value", idc.SN_CHECK)
             return func.start_ea
 
+    print("\t[-] _pmgr_binning_mode_get_value = not found")
     return ida_idaapi.BADADDR
 
 def find_do_printf(base_ea):
@@ -367,6 +437,7 @@ def find_do_printf(base_ea):
             idc.set_name(func.start_ea, "_do_printf", idc.SN_CHECK)
             return func.start_ea
 
+    print("\t[-] _do_printf = not found")
     return ida_idaapi.BADADDR
 
 def find_image4_get_partial(base_ea):
@@ -383,6 +454,7 @@ def find_image4_get_partial(base_ea):
         idc.set_name(func.start_ea, "_image4_get_partial", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _image4_get_partial = not found")
     return ida_idaapi.BADADDR
 
 def find_putchar(base_ea, base_end_ea):
@@ -394,6 +466,7 @@ def find_putchar(base_ea, base_end_ea):
         idc.set_name(func.start_ea, "_putchar", idc.SN_CHECK)
         return func.start_ea
 
+    print("\t[-] _putchar = not found")
     return ida_idaapi.BADADDR
 
 def find_macho_load(base_ea):
@@ -415,6 +488,7 @@ def find_macho_load(base_ea):
             idc.set_name(func2_ea, "_macho_load", idc.SN_CHECK)
             return func2_ea
 
+    print("\t[-] _macho_load = not found")
     return ida_idaapi.BADADDR
 
 def find_interesting(base_ea, base_end):
@@ -425,20 +499,31 @@ def find_interesting(base_ea, base_end):
 
         if ldk_ea != ida_idaapi.BADADDR:
             lk_ea = find_load_kernelcache(ldk_ea)
+        else:
+            print("\t[-] _load_kernelcache = not found")
+    else:
+        print("\t[-] _loaded_kernelcache = not found")
+        print("\t[-] _load_kernelcache = not found")
     
     pk_ea = find_panic(base_ea)
     go_ea = find_do_go(base_ea)
     pr_ea = find_do_printf(base_ea)
 
-    i4vc_ea = find_image4_validate_property_callback(base_ea, base_end)
-
-    if i4vc_ea != ida_idaapi.BADADDR:
-        i4l_ea = find_image4_load(i4vc_ea)
-
     i4i_ea = find_image4_validate_property_callback_interposer(base_ea)
 
     if i4i_ea != ida_idaapi.BADADDR:
         i4ip_ea = find_image4_validate_property_callback_interposer_ptr(i4i_ea)
+        i4vc_ea = find_image4_validate_property_callback(base_ea, base_end, i4ip_ea)
+
+        if i4vc_ea != ida_idaapi.BADADDR:
+            i4l_ea = find_image4_load(i4vc_ea)
+        else:
+            print("\t[-] _image4_load = not found")
+
+    else:
+        print("\t[-] _image4_load = not found")
+        print("\t[-] _image4_validate_property_callback = not found")
+        print("\t[-] _image4_validate_property_callback_interposer_ptr = not found")
 
     rmr_ea = find_record_memory_range(base_ea)
     i4d_ea = find_img4decodeinit(base_ea)
@@ -450,6 +535,8 @@ def find_interesting(base_ea, base_end):
 
     if ml_ea != ida_idaapi.BADADDR:
         lko_ea = find_load_kernelcache_object(ml_ea)
+    else:
+        print("\t[-] _load_kernelcache_object = not found")
 
     pgv_ea = find_pmgr_binning_mode_get_value(base_ea)
     i4p_ea = find_image4_get_partial(base_ea)
