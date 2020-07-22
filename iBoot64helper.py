@@ -142,7 +142,7 @@ def find_img4decodeinit(base_ea):
     while true:
         ea, meh = ida_search.find_imm(cur_ea, ida_search.SEARCH_DOWN, 0x494D)
 
-        if ea != ida_idaapi.BADADDR:
+        if ea != ida_idaapi.BADADDR or not ida_bytes.is_mapped(ea):
             func = ida_funcs.get_func(ea)
             func_ea = 0
 
