@@ -23,8 +23,8 @@ I will be adding features to it, identifying more functions, etc.
 
 ## IDA support
 
-*iBoot64helper* now supports IDA 7.4 and lower versions (only tested with IDA's
-builtin IDAPython for Python 2.7 and Python 3.7).
+*iBoot64helper* now supports IDA 7.5 and lower versions (only tested with IDA's
+builtin IDAPython for Python 3).
 
 ## Decrypting images
 
