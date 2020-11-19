@@ -152,7 +152,7 @@ def find_image4_validate_property_callback_interposer_ptr(ea):
     return ida_idaapi.BADADDR
 
 def find_img4decodeinit(base_ea):
-    cur_ea = base_ea
+    ea = cur_ea = base_ea
 
     while true:
         ea_list = ida_search.find_imm(cur_ea, ida_search.SEARCH_DOWN, 0x494D)
@@ -183,12 +183,19 @@ def find_img4decodeinit(base_ea):
                 continue
 
             if ea_func_list[0].frm != ida_idaapi.BADADDR:
-                try:
-                    i4d_ea = ida_funcs.get_func(ea_func_list[0].frm).start_ea
+                i4d_ea = 0
+                i4d_func_ea = ida_funcs.get_func(ea_func_list[0].frm)
+
+                if i4d_func_ea:
+                    i4d_ea = i4d_func_ea.start_ea
+                else:
+                    i4d_ea = ida_search.find_binary(ea_func_list[0].frm, base_ea, "FF ?? ?? D1", 16, ida_search.SEARCH_UP)
+
+                if i4d_ea != ida_idaapi.BADADDR:
                     print("\t[+] _Img4DecodeInit = 0x%x" % (i4d_ea))
                     idc.set_name(i4d_ea, "_Img4DecodeInit", idc.SN_CHECK)
                     return i4d_ea
-                except:
+                else:
                     break
 
         cur_ea = ea + 4
