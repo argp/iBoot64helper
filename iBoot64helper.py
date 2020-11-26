@@ -151,10 +151,10 @@ def find_image4_validate_property_callback_interposer_ptr(ea):
     print("\t[-] _Img4DecodePerformTrustEvaluation = not found")
     return ida_idaapi.BADADDR
 
-def find_img4decodeinit(base_ea):
+def find_img4decodeinit(base_ea, base_end):
     ea = cur_ea = base_ea
 
-    while true:
+    while cur_ea < (base_ea + (0xa * 4)):
         ea_list = ida_search.find_imm(cur_ea, ida_search.SEARCH_DOWN, 0x494D)
 
         if ea_list[0] == ida_idaapi.BADADDR:
@@ -609,7 +609,7 @@ def find_interesting(base_ea, base_end):
         print("\t[-] _image4_validate_property_callback_interposer_ptr = not found")
 
     rmr_ea = find_record_memory_range(base_ea)
-    i4d_ea = find_img4decodeinit(base_ea)
+    i4d_ea = find_img4decodeinit(base_ea, base_end)
     scf_ea = find_stack_chk_fail(base_ea)
     aes_ea = find_aes_crypto_cmd(base_ea, base_end)
     udt_ea = find_update_device_tree(base_ea)
@@ -714,6 +714,10 @@ def load_file(fd, neflags, format):
             base_str = idc.print_operand(ea, 1)
             base_addr = int(base_str.split("=")[1], 16)
             
+            break
+
+        if ea > (4 * 20):
+            print("[!] Failed to identify base address")
             break
 
         ea += 4
