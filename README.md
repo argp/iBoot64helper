@@ -14,8 +14,8 @@ engineering. Currently it a) locates the image's proper loading address, b) reba
 the image, c) identifies functions based on common AArch64 function prologues, and
 d) finds and renames some interesting functions.
 
-As you can see in the screenshot below, 1920 functions
-are recognized after running it on iBoot version 5540.0.129.
+As you can see in the screenshot below, 3154 functions
+are recognized after running it on iBoot version 7459.100.504.0.1.
 
 <p align="center"><img src="screenshot.png"/></p>
 
@@ -23,7 +23,7 @@ I will be adding features to it, identifying more functions, etc.
 
 ## IDA support
 
-*iBoot64helper* now supports IDA 7.5 and lower versions (only tested with IDA's
+*iBoot64helper* now supports IDA 7.7 and lower versions (only tested with IDA's
 builtin IDAPython for Python 3).
 
 ## Decrypting images

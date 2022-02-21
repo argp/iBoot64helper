@@ -41,6 +41,45 @@ def find_panic(base_ea):
     print("\t[-] _panic = not found")
     return ida_idaapi.BADADDR
 
+def find_do_ramdisk(base_ea):
+    dr_ea = ida_search.find_text(base_ea, 1, 1, "Ramdisk image not valid\n", ida_search.SEARCH_DOWN)
+
+    if dr_ea != ida_idaapi.BADADDR:
+        for xref in idautils.XrefsTo(dr_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _do_ramdisk = 0x%x" % (func.start_ea))
+            idc.set_name(func.start_ea, "_do_ramdisk", idc.SN_CHECK)
+            return func.start_ea
+
+    print("\t[-] _do_ramdisk = not found")
+    return ida_idaapi.BADADDR
+
+def find_prepare_and_jump(base_ea):
+    paj_ea = ida_search.find_text(base_ea, 1, 1, "/boot/iBEC", ida_search.SEARCH_DOWN)
+
+    if paj_ea != ida_idaapi.BADADDR:
+        for xref in idautils.XrefsTo(paj_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _prepare_and_jump = 0x%x" % (func.start_ea))
+            idc.set_name(func.start_ea, "_prepare_and_jump", idc.SN_CHECK)
+            return func.start_ea
+
+    print("\t[-] _prepare_and_jump = not found")
+    return ida_idaapi.BADADDR
+
+def find_arm_synchronous_exception(base_ea):
+    ase_ea = ida_search.find_text(base_ea, 1, 1, "synchronous", ida_search.SEARCH_DOWN)
+
+    if ase_ea != ida_idaapi.BADADDR:
+        for xref in idautils.XrefsTo(ase_ea):
+            func = idaapi.get_func(xref.frm)
+            print("\t[+] _arm_synchronous_exception = 0x%x" % (func.start_ea))
+            idc.set_name(func.start_ea, "_arm_synchronous_exception", idc.SN_CHECK)
+            return func.start_ea
+
+    print("\t[-] _arm_synchronous_exception = not found")
+    return ida_idaapi.BADADDR
+
 def find_chipid_get_chip_revision(base_ea, base_end_ea):
     seq_ea = ida_search.find_binary(base_ea, base_end_ea, "00 21 06 33", 16, ida_search.SEARCH_DOWN)
 
@@ -54,7 +93,7 @@ def find_chipid_get_chip_revision(base_ea, base_end_ea):
     return ida_idaapi.BADADDR
 
 def find_platform_early_init(base_ea, base_end_ea):
-    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "60 02 40 39", 16, ida_search.SEARCH_DOWN)
+    seq_ea = ida_search.find_binary(base_ea, base_end_ea, "A0 00 80 52 E1 03 80 52", 16, ida_search.SEARCH_DOWN)
 
     if seq_ea != ida_idaapi.BADADDR:
         func = idaapi.get_func(seq_ea)
@@ -97,10 +136,10 @@ def find_image4_load(ea):
     return ida_idaapi.BADADDR
 
 def find_image4_validate_property_callback_interposer(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x424E)
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x616E7264)
 
-    if ea_list[0] == ida_idaapi.BADADDR:
-        ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x424E0000)
+    if ea_list[0] == ida_idaapi.BADADDR or not ea_list:
+        ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x4350524F)
 
     if ea_list[0] != ida_idaapi.BADADDR:
         func_ea = ida_funcs.get_func(ea_list[0]).start_ea
@@ -152,55 +191,21 @@ def find_image4_validate_property_callback_interposer_ptr(ea):
     return ida_idaapi.BADADDR
 
 def find_img4decodeinit(base_ea, base_end):
-    ea = cur_ea = base_ea
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x494D)
 
-    while cur_ea < (base_ea + (0xa * 4)):
-        ea_list = ida_search.find_imm(cur_ea, ida_search.SEARCH_DOWN, 0x494D)
+    if ea_list[0] == ida_idaapi.BADADDR:
+        ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x494D0000)
 
-        if ea_list[0] == ida_idaapi.BADADDR:
-            ea_list = ida_search.find_imm(cur_ea, ida_search.SEARCH_DOWN, 0x494D0000)
+    if ea_list[0] != ida_idaapi.BADADDR:
+        try:
+            func_ea = ida_funcs.get_func(ea_list[0]).start_ea
+        except:
+            print("\t[-] _Img4DecodeInit = not found")
+            return ida_idaapi.BADADDR
 
-        if ea_list[0] != ida_idaapi.BADADDR:
-            ea = ea_list[0]
-            func = ida_funcs.get_func(ea)
-            func_ea = 0
-
-            if not func:
-                func_ea = ida_search.find_binary(ea, base_ea, "?? ?? BD A9", 16, ida_search.SEARCH_UP)
-
-                if func_ea != ida_idaapi.BADADDR:
-                    ida_funcs.add_func(func_ea)
-                else:
-                    print("\t[-] _Img4DecodeInit = not found")
-                    return ida_idaapi.BADADDR
-            else:
-                func_ea = func.start_ea
-
-            ea_func_list = list(idautils.XrefsTo(func_ea))
-            
-            if not ea_func_list:
-                cur_ea = ea + 4
-                continue
-
-            if ea_func_list[0].frm != ida_idaapi.BADADDR:
-                i4d_ea = 0
-                i4d_func_ea = ida_funcs.get_func(ea_func_list[0].frm)
-
-                if i4d_func_ea:
-                    i4d_ea = i4d_func_ea.start_ea
-                else:
-                    i4d_ea = ida_search.find_binary(ea_func_list[0].frm, base_ea, "FF ?? ?? D1", 16, ida_search.SEARCH_UP)
-
-                if i4d_ea != ida_idaapi.BADADDR:
-                    print("\t[+] _Img4DecodeInit = 0x%x" % (i4d_ea))
-                    idc.set_name(i4d_ea, "_Img4DecodeInit", idc.SN_CHECK)
-                    return i4d_ea
-                else:
-                    break
-
-        cur_ea = ea + 4
-
-    print("\t[-] _Img4DecodeInit = not found")
+        print("\t[+] _Img4DecodeInit = 0x%x" % (func_ea))
+        idc.set_name(func_ea, "_Img4DecodeInit", idc.SN_CHECK)
+    
     return ida_idaapi.BADADDR
 
 def find_target_early_init(base_ea):
@@ -237,7 +242,7 @@ def find_target_early_init(base_ea):
     return ida_idaapi.BADADDR
 
 def find_aes_crypto_cmd(base_ea, base_end_ea):
-    aes_ea = ida_search.find_binary(base_ea, base_end_ea, "89 2C 00 72", 16, ida_search.SEARCH_DOWN)
+    aes_ea = ida_search.find_text(base_ea, 1, 1, "AES: bad arguments", ida_search.SEARCH_DOWN)
 
     if aes_ea != ida_idaapi.BADADDR:
         func = idaapi.get_func(aes_ea)
@@ -322,7 +327,7 @@ def find_macho_valid(base_ea, base_end_ea):
     return ida_idaapi.BADADDR
 
 def find_stack_chk_fail(base_ea):
-    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x7CC8)
+    ea_list = ida_search.find_imm(base_ea, ida_search.SEARCH_DOWN, 0x3CF)
     func = ida_funcs.get_func(ea_list[0])
 
     if (ea_list[0] != ida_idaapi.BADADDR) and func:
@@ -608,6 +613,9 @@ def find_interesting(base_ea, base_end):
         print("\t[-] _image4_validate_property_callback = not found")
         print("\t[-] _image4_validate_property_callback_interposer_ptr = not found")
 
+    dr_ea = find_do_ramdisk(base_ea)
+    paj_ea = find_prepare_and_jump(base_ea)
+    ase_ea = find_arm_synchronous_exception(base_ea)
     rmr_ea = find_record_memory_range(base_ea)
     i4d_ea = find_img4decodeinit(base_ea, base_end)
     scf_ea = find_stack_chk_fail(base_ea)
@@ -623,7 +631,6 @@ def find_interesting(base_ea, base_end):
     pei_ea = find_platform_early_init(base_ea, base_end)
     crv_ea = find_chipid_get_chip_revision(base_ea, base_end)
     pid_ea = find_platform_init_display(base_ea)
-
     pc_ea = find_putchar(base_ea, base_end)
     
     # just to be sure
